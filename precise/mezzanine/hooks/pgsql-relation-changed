@@ -24,7 +24,7 @@ if [ -d $BASE_INSTALL_DIR ]; then
     if [ $DATABASE ]; then
         #Lets only append if we didnt already
         if ! grep -Fxq "juju_settings" local_settings.py; then
-            echo "try:"
+            echo "try:" >> local_settings.py
     	    echo "    from juju_settings import *" >> local_settings.py
             echo "except ImportError:" >> local_settings.py
             echo "    pass" >> local_settings.py
