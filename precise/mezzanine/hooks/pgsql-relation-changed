@@ -1,0 +1,52 @@
+#!/bin/bash
+set -x for verbose logging to juju debug-log
+# This must be renamed to the name of the relation. The goal here is to
+# affect any change needed by relationships being formed, modified, or broken
+# This script should be idempotent.
+juju-log $JUJU_REMOTE_UNIT modified its settings
+juju-log Relation settings:
+relation-get
+juju-log Relation members:
+relation-list
+
+
+BASE_INSTALL_DIR=/srv/mezzanine
+
+if [ -d $BASE_INSTALL_DIR ]; then
+    cd $BASE_INSTALL_DIR;
+    cd project;
+    DATABASE=`relation-get database`;
+    USER=`relation-get user`;
+    PASSWORD=`relation-get password`;
+    HOST=`relation-get host`;
+    #this hook gets called twice, one does not have the actual data
+    #this cant be reproduced in debug hooks
+    if [ $DATABASE ]; then
+        #Lets only append if we didnt already
+        if ! grep -Fxq "juju_settings" local_settings.py; then
+            echo "try:"
+    	    echo "    from juju_settings import *" >> local_settings.py
+            echo "except ImportError:" >> local_settings.py
+            echo "    pass" >> local_settings.py
+        fi
+
+        #Create the actual settings file with the obtained data
+    	echo "" > juju_settings.py
+    	echo "DATABASES = {"  >> juju_settings.py
+    	echo "    'default': {" >> juju_settings.py
+    	echo "        'ENGINE': 'django.db.backends.postgresql_psycopg2', " >> juju_settings.py
+    	echo "        'NAME': '${DATABASE}'," >> juju_settings.py
+    	echo "        'USER': '${USER}'," >> juju_settings.py
+    	echo "        'PASSWORD': '${PASSWORD}'," >> juju_settings.py
+    	echo "        'HOST': '${HOST}', " >> juju_settings.py
+    	echo "        'PORT': ''," >> juju_settings.py
+    	echo "    }" >> juju_settings.py
+    	echo "}" >> juju_settings.py
+
+        #how to handle db already existing?
+    	python manage.py createdb --noinput;
+    fi
+fi
+
+
+open-port 8000

@@ -1,0 +1,56 @@
+#!/bin/bash
+set -e #u # -x for verbose logging to juju debug-log
+# Here do anything needed to install the service
+# i.e. apt-get install -y foo  or  bzr branch http://myserver/mycode /srv/webroot
+# Make sure this hook exits cleanly and is idempotent, common problems here are
+# failing to account for a debconf question on a dependency, or trying to pull
+# from github without installing git first.
+
+BASE_INSTALL_DIR=/srv/mezzanine
+SUPERVISOR_CONF=/etc/supervisor/conf.d/mezzanine.conf
+SUPERVISOR_RUNNER=${BASE_INSTALL_DIR}/runner.sh
+apt-get install -y python-pip python-jinja2 mercurial git-core subversion bzr supervisor gettext postgresql build-essential libpq-dev python-dev
+#Perhaps I should replace this with a requirements.txt
+pip install -b /tmp/ mezzanine
+pip install -b /tmp/ gunicorn
+pip install -b /tmp/ psycopg2
+
+function generate_supervisor_runner {
+echo "#!/bin/bash" > ${SUPERVISOR_RUNNER} 
+echo "NAME=\"mezzanine\"" >> ${SUPERVISOR_RUNNER} 
+echo "DJANGODIR="${BASE_INSTALL_DIR}/project >> ${SUPERVISOR_RUNNER} 
+echo "USER=www-data" >> ${SUPERVISOR_RUNNER} 
+echo "GROUP=www-data" >> ${SUPERVISOR_RUNNER} 
+echo "WORKERS=3" >> ${SUPERVISOR_RUNNER} 
+echo "TIMEOUT=120" >> ${SUPERVISOR_RUNNER} 
+echo "BIND_ADDRESS=0.0.0.0:8000" >> ${SUPERVISOR_RUNNER} 
+
+echo "exec gunicorn_django \\" >> ${SUPERVISOR_RUNNER} 
+echo "    --workers \$WORKERS \\" >> ${SUPERVISOR_RUNNER} 
+echo "    --timeout \$TIMEOUT \\" >> ${SUPERVISOR_RUNNER} 
+echo "    --bind \$BIND_ADDRESS \\" >> ${SUPERVISOR_RUNNER} 
+echo "    --user=\$USER --group=\$GROUP \\" >> ${SUPERVISOR_RUNNER} 
+chmod +x ${SUPERVISOR_RUNNER};
+}
+
+function generate_supervisor_conf {
+echo "[program:mezzanine]" > ${SUPERVISOR_CONF};
+echo "directory="${BASE_INSTALL_DIR}/project >> ${SUPERVISOR_CONF};
+echo "command="${SUPERVISOR_RUNNER} >> ${SUPERVISOR_CONF};
+echo "autostart=true" >> ${SUPERVISOR_CONF};
+echo "autorestart=true" >> ${SUPERVISOR_CONF};
+}
+
+if ! [ -d /srv/mezzanine ]; then
+    mkdir -p ${BASE_INSTALL_DIR};
+    cd ${BASE_INSTALL_DIR};
+    mkdir project;
+    mezzanine-project project;
+    if ! [ -f $SUPERVISOR_RUNNER ]; then
+        generate_supervisor_runner;
+    fi
+    if ! [ -f $SUPERVISOR_CONF ]; then
+        generate_supervisor_conf;
+    fi
+
+fi

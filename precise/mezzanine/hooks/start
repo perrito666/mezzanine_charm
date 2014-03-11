@@ -1,0 +1,13 @@
+#!/bin/bash
+set -e #u # -x for verbose logging to juju debug-log
+# Here put anything that is needed to start the service.
+# Note that currently this is run directly after install
+# i.e. 'service apache2 start'
+if [ "$(service supervisor status)" == " is running" ]; then 
+    #this does not load the conf 
+    #smells like race condition
+    service supervisor force-reload;
+    sudo supervisorctl reload
+else
+    service supervisor start; 
+fi

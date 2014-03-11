@@ -1,0 +1,17 @@
+name: mezzanine
+summary: This is an experiment on creating a charm to install mezzanine
+maintainer: Horacio Duran <horacio.duran@gmail.com>
+description: |
+  This will Oh So install mezzanine
+categories:
+  - applications
+subordinate: false
+provides:
+  website:
+    interface: http
+    optional: true
+requires:
+  pgsql:
+    interface: pgsql
+    optional: true
+

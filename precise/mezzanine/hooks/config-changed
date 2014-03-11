@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e #u # -x for verbose logging to juju debug-log
+# config-changed occurs everytime a new configuration value is updated (juju set)
+if [ "$(service supervisor status)" == " is running" ]; then 
+    #this does not load the conf 
+    #smells like race condition
+    service supervisor force-reload;
+else
+    service supervisor start; 
+fi
