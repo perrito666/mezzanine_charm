@@ -45,6 +45,14 @@ if [ -d $BASE_INSTALL_DIR ]; then
 
         #how to handle db already existing?
     	python manage.py createdb --noinput;
+        if [ "$(service supervisor status)" == " is running" ]; then 
+            #this does not load the conf 
+            #smells like race condition
+            service supervisor force-reload;
+            sudo supervisorctl reload
+        else
+            service supervisor start; 
+        fi
     fi
 fi
 
